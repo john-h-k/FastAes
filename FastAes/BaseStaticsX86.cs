@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
-using Vec = System.Runtime.Intrinsics.Vector128<byte>;
+using AesVector = System.Runtime.Intrinsics.Vector128<byte>;
 
 [assembly: InternalsVisibleTo("Interactive")]
 
@@ -14,7 +14,7 @@ namespace FastAes
         private const MethodImplOptions MaxOpt = MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization;
 
         [MethodImpl(MaxOpt)]
-        public static Vec RawEncryptBlock(Vec block, Span<Vec> keySchedule)
+        public static AesVector RawEncryptBlock(AesVector block, Span<AesVector> keySchedule)
         {
             block = Sse2.Xor(block, keySchedule[0]);
             block = Aes.Encrypt(block, keySchedule[1]);
@@ -32,7 +32,7 @@ namespace FastAes
         }
 
         [MethodImpl(MaxOpt)]
-        public static Vec RawDecryptBlock(Vec block, Span<Vec> keySchedule)
+        public static AesVector RawDecryptBlock(AesVector block, Span<AesVector> keySchedule)
         {
             block = Sse2.Xor(block, keySchedule[10 + 0]);
             block = Aes.Decrypt(block, keySchedule[10 + 1]);
@@ -50,13 +50,13 @@ namespace FastAes
         }
 
         [MethodImpl(MaxOpt)]
-        public static Vector128<byte> KeyExp128(Vec key, byte num)
+        public static Vector128<byte> KeyExp128(AesVector key, byte num)
         {
             return InternalKeyExp128(key, Aes.KeygenAssist(key, num));
         }
 
         [MethodImpl(MaxOpt)]
-        public static Vector128<byte> InternalKeyExp128(Vec key, Vec keyGenAssisted)
+        public static Vector128<byte> InternalKeyExp128(AesVector key, AesVector keyGenAssisted)
         {
             keyGenAssisted = Sse2.Shuffle(keyGenAssisted.As<uint>(), (((3) << 6) | ((3) << 4) | ((3) << 2) | ((3))))
                 .As<byte>();
@@ -69,7 +69,7 @@ namespace FastAes
         }
 
         [MethodImpl(MaxOpt)]
-        public static void LoadEncryptionKeyOnly(byte* key, Span<Vec> keySchedule)
+        public static void LoadEncryptionKeyOnly(byte* key, Span<AesVector> keySchedule)
         {
             keySchedule[0] = Sse2.LoadVector128(key);
             keySchedule[1] = KeyExp128(keySchedule[0], 0x01);
@@ -85,7 +85,7 @@ namespace FastAes
         }
 
         [MethodImpl(MaxOpt)]
-        public static void LoadKey(byte* key, Span<Vec> keySchedule)
+        public static void LoadKey(byte* key, Span<AesVector> keySchedule)
         {
             LoadEncryptionKeyOnly(key, keySchedule);
 
@@ -101,7 +101,7 @@ namespace FastAes
         }
 
         [MethodImpl(MaxOpt)]
-        public static void EncryptBlock(Span<Vec> keySchedule, byte* plainText, byte* cipherTextBuffer)
+        public static void EncryptBlock(Span<AesVector> keySchedule, byte* plainText, byte* cipherTextBuffer)
         {
             Vector128<byte> msg = Sse2.LoadVector128(plainText);
 
@@ -111,7 +111,7 @@ namespace FastAes
         }
 
         [MethodImpl(MaxOpt)]
-        public static void DecryptBlock(Span<Vec> keySchedule, byte* cipherText, byte* plainTextBuffer)
+        public static void DecryptBlock(Span<AesVector> keySchedule, byte* cipherText, byte* plainTextBuffer)
         {
             Vector128<byte> msg = Sse2.LoadVector128(cipherText);
 
